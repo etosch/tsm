@@ -37,3 +37,7 @@
 			3.0 ['float_add 'float_mult]}]})
        :float)
       0.09))
+
+(deftest test-7
+  (is (eval-tsm {:integer [9] :x [{:imap 'integer_add_const :const 3}]})
+      {:float [], :boolean [], :string [], :ts [{}], :x [], :integer [12]}))

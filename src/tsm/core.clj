@@ -18,12 +18,14 @@
   (or (is-imap? thing) (is-pair? thing)))
 
 ;; Used for debugging
+;; ------------------------------------------------------------------------------------------------
 (defn is-state? [m]
   (and (m :x) (m :ts)
        (reduce #(and %1 %2) (map #(get m %) (keys @literals)))))
+;; ------------------------------------------------------------------------------------------------
 
 (defn ensure-state [m]
-  (reduce #(if-not (get %1 %2) (assoc %1 %2 []) %1)
+  (reduce #(if-not (get %1 %2) (assoc %1 %2 (if (= %2 :ts) [(sorted-map)] [])) %1)
 	  m
 	  (concat '(:ts :x) (keys @literals))))
 
@@ -34,10 +36,9 @@
 
 ;; I'm keeping tag evaluation in core.clj, since this is, after all, a tag space machine
 (defn match-tag [ts tag]
-  (let [sorted-ts (sort #(< (%1 0) (%2 0)) ts)
-	[_ default-val] (first sorted-ts)]
-    (loop [tsp (seq sorted-ts)]
-      (if-let [[[t v] & more] tsp]
+  (let [[_ default-val] (first ts)]
+    (loop [ts-seq (seq ts)]
+      (if-let [[[t v] & more] ts-seq]
 	(if (>= t tag) v
 	    (recur more))
 	default-val))))
@@ -52,26 +53,33 @@
 
 (defn eval-ts [state inst]
   (if-let [cmd (get @push/instruction-table (inst :imap))]
-    (apply cmd (cons state (vals (dissoc inst :imap))))
+    (cmd state (inst :tag) (inst :pop))
+    state))
+
+(defn eval-imap [state inst]
+  (if-let [cmd (get @push/instruction-table (inst :imap))]
+    (apply cmd (cons state (flatten (seq (dissoc inst :imap)))))
     state))
 
 (defn eval-composite [state i]
   (cond (is-pair? i) (eval-pair state i)
 	(is-ts? i) (eval-ts state i)
+	(is-imap? i) (eval-imap state i)
 	:else (throw (Exception. "Unrecognized composite"))))
    
 (defn eval-x [{x :x, :as state}]
   (when @debug (println state))
   (let [i (last x)
-	new-state (assoc state :x (pop x))]
-    (if (is-composite? i)
-      (eval-composite new-state i)
-      (if-let [stack (recognize-literal i)]
-	(add-to-stack new-state stack i)
-	(eval-inst new-state i)))))
+	new-state (assoc state :x (pop x))
+	stack (recognize-literal i)]
+    (cond (is-composite? i) (eval-composite new-state i)
+	  stack (add-to-stack new-state stack i)
+	  (is-inst? i) (eval-inst new-state i)
+	  :else (throw (Exception. (str "Unrecognized value on x stack: " i))))))
 
 (defn eval-tsm [state & {direction :direction}]
-  (let [s (cond (or (nil? direction) (= direction :rl)) state
+  (let [state (ensure-state state)
+	s (cond (or (nil? direction) (= direction :rl)) state
 		(= direction :lr) (zipmap (keys state) (map #(vec (reverse %)) (vals state)))
 		:else (throw (Exception. "Unrecognized direction. Please choose from :rl, :lr, or nil")))]
     (if (empty? (s :x)) s (recur (eval-x s) nil))))

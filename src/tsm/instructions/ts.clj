@@ -2,13 +2,22 @@
   (:use [tsm.core])
   (:require [clojush.pushstate :as push]))
 
+;; These instructions are executed as vanilla instructions
+
 (push/define-registered ts_pop
   (fn [state]
     (if-not (empty? (state :ts))
       (assoc state :ts (pop (get state :ts)))
       state)))
 
+(push/define-registered ts_new
+  (fn [{ts :ts, :as state}]
+    (assoc state :ts (conj ts (sorted-map)))))
+
+
+;; These instructions all take a state and a tag as arguments
 ;; default behavior is pop -- I suppose a nopop could be implemented with "baked-in" args at a later point
+
 (push/define-registered ts_tag
   (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
     (if-let [tagged-cmd (last x)]
@@ -39,9 +48,6 @@
   (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
     (assoc state :x (conj (pop x) (match-tag (first ts) tag) (last x)))))
 
-(push/define-registered ts_new
-  (fn [{ts :ts, :as state}]
-    (assoc state :ts (conj ts {}))))
 
 ;; still need to define the 2-versions of the tag spaces - would suggest having this as an argument
 ;; in the imap, since the imap instructions just apply the function to the appropriate arguments.
