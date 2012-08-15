@@ -9,13 +9,15 @@
   (fn [{floatstack :float, :as state}]
     (if (> (count floatstack) 1)
       (let [[stack [x y]] (vec-split floatstack -2)]
-	(add-to-stack (assoc state :float stack) :float (+ x y))))))
+	(add-to-stack (assoc state :float stack) :float (+ x y)))
+      state)))
 
 (push/define-registered float_mult
   (fn [{floatstack :float, :as state}]
     (if (> (count floatstack) 1)
       (let [[stack [x y]] (vec-split floatstack -2)]
-	(add-to-stack (assoc state :float stack) :float (* x y))))))
+	(add-to-stack (assoc state :float stack) :float (* x y)))
+      state)))
 
 
 	
