@@ -4,6 +4,10 @@
   (:use [tsm.util]
 	[tsm.config]))
 
+;; Override the default last operation to make it O(1) for vectors
+(defn last [v]
+  (nth v (dec (count v))))
+
 (defn recognize-literal [thing]
   (loop [lits (seq @literals)]
     (if-let [[type pred] (first lits)]
@@ -46,14 +50,14 @@
 (defn eval-inst [state inst]
   (if-let [cmd (get @push/instruction-table inst)]
     (cmd state)
-    state))
+    (throw (Exception. (str "Unregistered instruction: " inst)))))
 
 (defn eval-pair [{x :x, :as state} [p1 p2]]
   (assoc state :x (conj x p2 p1)))
 
-(defn eval-ts [state inst]
-  (if-let [cmd (get @push/instruction-table (inst :imap))]
-    (cmd state (inst :tag) (inst :pop))
+(defn eval-ts [state {:keys [imap tag pop ith], :or {pop :pop, ith 1}}]
+  (if-let [cmd (get @push/instruction-table imap)]
+    (cmd state tag pop ith)
     state))
 
 (defn eval-imap [state inst]
@@ -77,9 +81,6 @@
 	  (is-inst? i) (eval-inst new-state i)
 	  :else (throw (Exception. (str "Unrecognized value on x stack: " i))))))
 
-(defn eval-tsm [state & {direction :direction}]
-  (let [state (ensure-state state)
-	s (cond (or (nil? direction) (= direction :rl)) state
-		(= direction :lr) (zipmap (keys state) (map #(vec (reverse %)) (vals state)))
-		:else (throw (Exception. "Unrecognized direction. Please choose from :rl, :lr, or nil")))]
-    (if (empty? (s :x)) s (recur (eval-x s) nil))))
+(defn eval-tsm [state]
+  (let [s (ensure-state state)]
+    (if (empty? (s :x)) s (recur (eval-x s)))))
