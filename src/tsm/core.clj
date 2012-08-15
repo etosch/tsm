@@ -20,6 +20,7 @@
 (defn is-ts? [thing] (and (is-imap? thing) (= (first (s/split (str (thing :imap)) #"_")) "ts")))
 (defn is-composite? [thing]
   (or (is-imap? thing) (is-pair? thing)))
+(defn is-no-op? [thing] (= thing :no-op))
 
 ;; Used for debugging
 ;; ------------------------------------------------------------------------------------------------
@@ -79,6 +80,7 @@
     (cond (is-composite? i) (eval-composite new-state i)
 	  stack (add-to-stack new-state stack i)
 	  (is-inst? i) (eval-inst new-state i)
+	  (is-no-op? i) new-state
 	  :else (throw (Exception. (str "Unrecognized value on x stack: " i))))))
 
 (defn eval-tsm [state]
