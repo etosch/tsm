@@ -25,7 +25,7 @@
 		 state
 		 (assoc state :x (pop x)))
 	  :ts
-	  (reduce #(conj %1 %2)
+	  (reduce conj
 		  (conj rest-ts (assoc current-ts tag tagged-cmd))
 		  top-ts))))))
 
