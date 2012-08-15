@@ -8,3 +8,6 @@
 	    :integer integer?}))
 
 (def debug (atom true))
+
+(def max-int (atom 10))
+(def max-float (atom 10.0))
