@@ -14,6 +14,4 @@ The main entry point for the tag space machine evaluator is the function eval-ts
 # TODO
 
 * Random code generator
-* Implement multi-tag space access (see note in the tag instruction file)
-* Return final state according the the input convention (:rl or :lr)
 * Implement macro to hide the need to make instructions symbols
