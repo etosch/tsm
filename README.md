@@ -8,7 +8,7 @@ The main entry point for the tag space machine evaluator is the function eval-ts
 
 ## Notes:
 
-* Stacks are implemented with a PersistentVector. Consequently, pushing and popping occurs at the end of the vector, rather than the beginning. Thus, the output will be printed in reverse. eval-tsm takes an optional argument, :direction, which indicates the order of the input, either from left to right (traditional stack) as :lr or right to left (Clojure vectors) as :rl. The default implementation is as a Clojure vector, :rl.
+* Stacks are implemented with a PersistentVector. Consequently, pushing and popping occurs at the end of the vector, rather than the beginning. Thus, the output will be printed in reverse. 
 * eval-tsm is not currently a macro; when manually constructing examples and testing code, make sure you indicate that instructions are symbols.
 
 # TODO
