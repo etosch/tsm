@@ -1,5 +1,5 @@
 (ns tsm.instructions.ts
-  (:use [tsm.core])
+  (:use [tsm core util])
   (:require [clojush.pushstate :as push]))
 
 ;; These instructions are executed as vanilla instructions
@@ -16,42 +16,38 @@
 
 
 ;; These instructions all take a state and a tag as arguments
-;; default behavior is pop -- I suppose a nopop could be implemented with "baked-in" args at a later point
 
 (push/define-registered ts_tag
-  (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
+  (fn [{x :x, ts :ts, :as state} tag pop? ith]
     (if-let [tagged-cmd (last x)]
-      (let [[rest-ts [current-ts & _]] (vec-split ts -1)]
+      (let [[rest-ts [current-ts & top-ts]] (vec-split ts (* -1 ith))]
 	(assoc (if (= pop? :nopop)
 		 state
 		 (assoc state :x (pop x)))
 	  :ts
-	  (conj rest-ts (assoc current-ts tag tagged-cmd)))))))
+	  (reduce #(conj %1 %2)
+		  (conj rest-ts (assoc current-ts tag tagged-cmd))
+		  top-ts))))))
 
 (push/define-registered ts_tag_pair
-  (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
+  (fn [{x :x, ts :ts, :as state} tag pop? ith]
     (if (> (count x) 1)
       (let [[p1 p2 & _] x
-	    [rest-ts [current-ts & _]] (vec-split ts -1)]
+	    [rest-ts [current-ts & top-ts]] (vec-split ts (* -1 ith))]
 	(assoc (if (= pop? :nopop)
 		 state
 		 (assoc state :x (pop (pop x))))
 	  :ts
-	  (conj rest-ts (assoc current-ts tag [p1 p2])))))))
+	  (reduce conj
+		  (conj rest-ts (assoc current-ts tag [p1 p2]))
+		  top-ts))))))
 
 ;; what happens if the tag space is empty?
 (push/define-registered ts_tagged
-  (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
-    (assoc state :x (conj x (match-tag (first ts) tag)))))
+  (fn [{x :x, ts :ts, :as state} tag pop? ith]
+    (assoc state :x (conj x (match-tag (nth ts (- (count ts) ith)) tag)))))
 
 (push/define-registered ts_tagged_under
-  (fn [{x :x, ts :ts, :as state} tag & {pop? :pop}]
-    (assoc state :x (conj (pop x) (match-tag (first ts) tag) (last x)))))
-
-
-;; still need to define the 2-versions of the tag spaces - would suggest having this as an argument
-;; in the imap, since the imap instructions just apply the function to the appropriate arguments.
-;; the ts instructions above would then just need to pick out the relevent tag space
-;; (if we're using arguments in the imap anyway, why not leverage this?)
-
+  (fn [{x :x, ts :ts, :as state} tag pop? ith]
+    (assoc state :x (conj (pop x) (match-tag (nth ts (- (count ts) ith)) tag) (last x)))))
 	
