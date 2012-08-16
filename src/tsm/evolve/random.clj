@@ -25,5 +25,3 @@
       (cond (empty? after) (vec before)
 	    (and (= 0 (pushrand/lrand-int @max-int)) (> (count after) 1)) (recur (conj before (vec (take 2 after))) (drop 2 after))
 	    :else (recur (conj before (first after)) (rest after))))))
-	      
-		 
