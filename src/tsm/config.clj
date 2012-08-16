@@ -11,3 +11,4 @@
 
 (def max-int (atom 10))
 (def max-float (atom 10.0))
+(def tag-limit (atom 1.0))
