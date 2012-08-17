@@ -10,7 +10,7 @@
 	       (* r r r r)
 	       (* r r))])))
 
-(defn fitness-function [state]
+(defn error-function [state]
   (reduce + (for [[x f-at-x] sextic-samples]
-	      (- f-at-z (
-     
+	      (let [err (- f-at-x (last ((eval-tsm (add-to-stack state :float x)) :float)))]
+		(* err err)))))
