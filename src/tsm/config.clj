@@ -7,7 +7,7 @@
 	    :float float?
 	    :integer integer?}))
 
-(def debug (atom true))
+(def debug (atom nil))
 
 (def max-int (atom 10))
 (def max-float (atom 10.0))
