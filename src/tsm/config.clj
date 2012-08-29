@@ -12,3 +12,6 @@
 (def max-int (atom 10))
 (def max-float (atom 10.0))
 (def tag-limit (atom 1.0))
+(def time-limit (atom 10000))
+
+(def error-function (atom (fn [] (throw (Exception. "error-function not set")))))
