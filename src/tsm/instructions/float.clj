@@ -1,6 +1,5 @@
 (ns tsm.instructions.float
-  (:use [tsm.core]
-	[tsm.util])
+  (:use [tsm core util])
   (:require [clojush.pushstate :as push]))
 
 ;; temporary instructions due to incompatabilities with clojush state implementation
@@ -31,4 +30,71 @@
     (if (> (count floatstack) 1)
       (let [[stack [x y]] (vec-split floatstack -2)]
 	(add-to-stack (assoc state :float stack) :float (/ x y)))
+      state)))
+
+(push/define-registered float_pop
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 0)
+      (assoc state :float (pop floatstack))
+      state)))
+
+(push/define-registered float_dup
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 0)
+      (add-to-stack state :float (last floatstack))
+      state)))
+
+(push/define-registered float_swap
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 1)
+      (let [[more [x1 x2]] (vec-split floatstack -2)]
+	(add-to-stack (assoc state :float more) :float x2 :float x1))
+      state)))
+
+(push/define-registered float_rot
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 2)
+      (let [[more [x1 x2 x3]] (vec-split floatstack -3)]
+	(add-to-stack (assoc state :float more) :float x2 :float x3 :float x1))
+      state)))
+
+(push/define-registered float_eq
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 1)
+      (let [[more [x1 x2]] (vec-split floatstack -2)]
+	(add-to-stack (assoc state :float more) :boolean (= x1 x2)))
+      state)))
+		      
+(push/define-registered float_lt
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 1)
+      (let [[more [x1 x2]] (vec-split floatstack -2)]
+	(add-to-stack (assoc state :float more) :boolean (< x2 x1)))
+      state)))
+
+(push/define-registered float_gt
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 1)
+      (let [[more [x1 x2]] (vec-split floatstack -2)]
+	(add-to-stack (assoc state :float more) :boolean (> x2 x1))))))
+
+(push/define-registered float_sin
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 0)
+      (let [[more [x]] (vec-split floatstack -1)]
+	(add-to-stack (assoc state :float more) :float (Math/sin x)))
+      state)))
+
+(push/define-registered float_cos
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 0)
+      (let [[more [x]] (vec-split floatstack -1)]
+	(add-to-stack (assoc state :float more) :float (Math/cos x)))
+      state)))
+
+(push/define-registered float_tan
+  (fn [{floatstack :float, :as state}]
+    (if (> (count floatstack) 0)
+      (let [[more [x]] (vec-split floatstack -1)]
+	(add-to-stack (assoc state :float more) :Float (Math/tan x)))
       state)))
