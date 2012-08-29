@@ -27,7 +27,6 @@
   (let [[ts-rest [ts]] (vec-split ts-stack -1)
 	[target-tag target-val] (nth (seq ts) (pushrand/lrand-int (count ts)))
 	tag-or-val? (pushrand/lrand-int 2)]
-    (assert (and target-tag target-val))
     (assoc state :ts (conj ts-rest (assoc (dissoc ts target-tag)
 				     (if (= 0 tag-or-val?) (pushrand/lrand @tag-limit) target-tag)
 				     (if (= 0 tag-or-val?) target-tag (let [i (rand/random-instructions 2 atom-generators)]
