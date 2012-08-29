@@ -26,15 +26,20 @@
   (when @debug (println "mutate"))
   (let [[ts-rest [ts]] (vec-split ts-stack -1)
 	[target-tag target-val] (nth (seq ts) (pushrand/lrand-int (count ts)))
-	tag-or-val? (pushrand/lrand-int 2)]
-    (assoc state :ts (conj ts-rest (assoc (dissoc ts target-tag)
-				     (if (= 0 tag-or-val?) (pushrand/lrand @tag-limit) target-tag)
-				     (if (= 0 tag-or-val?) target-tag (let [i (rand/random-instructions 2 atom-generators)]
-									(if (= 0 (pushrand/lrand-int 2))
-									  (vec i)
-									  (first i)))))))
-    )
-  )
+	popped-ts (dissoc ts target-tag)]
+    (assoc state
+      :ts
+      (conj ts-rest
+	    (get {:tag (assoc popped-ts (pushrand/lrand @tag-limit) target-val)
+		  :value (assoc popped-ts target-tag (let [[i1 i2] (rand/random-instructions 2 atom-generators)]
+						       (get {:first [i1 (target-val 1)]
+							     :second [(target-val 0) i2]
+							     :both [i1 i2]
+							     :neither i1}
+							    (if (is-pair? target-val)
+							      (pushrand/lrand-nth '(:first :second :both))
+							      (pushrand/lrand-nth '(:both :neither))))))}
+		 (pushrand/lrand-nth '(:tag :value)))))))
 
 ;; basic tournament selection
 ;; maybe set this up as a multimethod to implement the various types of selection

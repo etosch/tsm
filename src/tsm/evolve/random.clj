@@ -29,14 +29,18 @@
 				    points)
 		    :else (recur (conj x n) points)))))))
   
-(defn group-pairs [instruction-list atom-generators]
-  (loop [before '() after instruction-list]
-    (cond (empty? after) (vec before)
-	  (and (= 0 (pushrand/lrand-int (count atom-generators)))
-	       (> (count after) 1))
-	  (recur (conj before (vec (take 2 after)))
-		 (drop 2 after))
-	  :else (recur (conj before (first after)) (rest after)))))
+(defn group-pairs
+  "Groups a list of instructions into pairs according to some probability. If no probability is supplied, all instructions are grouped into pairs."
+  ([instruction-list atom-generators probability]
+     (loop [before '() after instruction-list]
+       (cond (empty? after) (vec before)
+	     (and (< (pushrand/lrand) probability)
+		  (> (count after) 1))
+	     (recur (conj before (vec (take 2 after)))
+		    (drop 2 after))
+	     :else (recur (conj before (first after)) (rest after)))))
+  ([instruction-list atom-generators]
+     (group-pairs instruction-list atom-generators 1.0)))
 
 (defn make-ts [instruction-list]
   (loop [ilist instruction-list ts (sorted-map)]
