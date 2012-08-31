@@ -1,13 +1,11 @@
 (ns tsm.evolve.random
-  (:require [clojush.pushstate :as push]
-	    [clojush.random :as pushrand])
-  (:use [tsm.core]
-	[tsm.config]))
+  (:require [clojush.random :as pushrand])
+  (:use [tsm core config instructions]))
 
 (defn is-rand-inst? [thing] (cond (= thing 'rand-int) @max-int
 				  (= thing 'rand-float) @max-float
 				  :else false))
-(defn is-tag-inst? [thing] (contains? (disj (set (push/registered-for-type 'ts))
+(defn is-tag-inst? [thing] (contains? (disj (set (registered-for-type 'ts))
 					    'ts_pop 'ts_new)
 				      thing))
 
@@ -15,7 +13,8 @@
   (loop [x '()
 	 remaining-points code-size]
     (if (= 0 remaining-points) x
-	(let [[n v] (pushrand/lrand-nth atom-generators)
+	(let [n (pushrand/lrand-nth atom-generators)
+	      v (get @instruction-table n)
 	      points (dec remaining-points)]
 	    (if-let [max-num (is-rand-inst? n)]
 	      (recur (conj x (v max-num)) points)
@@ -31,7 +30,7 @@
   
 (defn group-pairs
   "Groups a list of instructions into pairs according to some probability. If no probability is supplied, all instructions are grouped into pairs."
-  ([instruction-list atom-generators probability]
+  ([instruction-list probability]
      (loop [before '() after instruction-list]
        (cond (empty? after) (vec before)
 	     (and (< (pushrand/lrand) probability)
@@ -39,8 +38,8 @@
 	     (recur (conj before (vec (take 2 after)))
 		    (drop 2 after))
 	     :else (recur (conj before (first after)) (rest after)))))
-  ([instruction-list atom-generators]
-     (group-pairs instruction-list atom-generators 1.0)))
+  ([instruction-list]
+     (group-pairs instruction-list 1.0)))
 
 (defn make-ts [instruction-list]
   (loop [ilist instruction-list ts (sorted-map)]
@@ -50,5 +49,5 @@
 
 (defn random-tsm [code-size atom-generators]
   (ensure-state {:ts (-> (random-instructions code-size atom-generators)
-			 (group-pairs atom-generators)
+			 (group-pairs)
 			 (make-ts))}))

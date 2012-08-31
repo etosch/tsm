@@ -1,28 +1,27 @@
 (ns tsm.instructions.x
-  (:use [tsm core util])
-  (:require [clojush.pushstate :as push]))
+  (:use [tsm core util instructions]))
 
-(push/define-registered x_dup
+(define-registered x_dup
   (fn [{x :x, :as state}]
     (if (> (count x) 0)
       (add-to-stack state :x (last x))
       state)))
 
-(push/define-registered x_swap
+(define-registered x_swap
   (fn [{x :x, :as state}]
     (if (> (count x) 1)
       (let [[more [x1 x2]] (vec-split x -2)]
 	(add-to-stack (assoc state :x more) :x x2 :x x1))
       state)))
 
-(push/define-registered x_rot
+(define-registered x_rot
   (fn [{x :x, :as state}]
     (if (> (count x) 2)
       (let [[more [x1 x2 x3]] (vec-split x -3)]
 	(add-to-stack (assoc state :x more) :x x3 :x x1 :x x2))
       state)))
 
-(push/define-registered x_if
+(define-registered x_if
   (fn [{x :x, boolean :boolean, :as state}]
     (if (and (> (count x) 1) (not (empty? boolean)))
       (let [[boolstack [pred]] (vec-split boolean -1)

@@ -1,22 +1,21 @@
 (ns tsm.instructions.ts
-  (:use [tsm core util])
-  (:require [clojush.pushstate :as push]))
+  (:use [tsm core util instructions]))
 
 ;; These instructions are executed as vanilla instructions
 
-(push/define-registered ts_pop
+(define-registered ts_pop
   (fn [{ts :ts, :as state}]
     (if (empty? ts) state
 	(assoc state :ts (pop ts)))))
 
-(push/define-registered ts_new
+(define-registered ts_new
   (fn [{ts :ts, :as state}]
     (assoc state :ts (conj ts (sorted-map)))))
 
 
 ;; These instructions all take a state and a tag as arguments
 
-(push/define-registered ts_tag
+(define-registered ts_tag
   (fn [{x :x, ts :ts, :as state} tag pop? ith]
     (if (> (count x) 0)
       (let [tagged-cmd (last x) 
@@ -28,7 +27,7 @@
 		  top-ts)))
       state)))
 
-(push/define-registered ts_tag_pair
+(define-registered ts_tag_pair
   (fn [{x :x, ts :ts, :as state} tag pop? ith]
     (if (> (count x) 1)
       (let [[p1 p2 & _] x
@@ -40,7 +39,7 @@
 		  top-ts)))
       state)))
 
-(push/define-registered ts_tagged
+(define-registered ts_tagged
   (fn [{x :x, ts :ts, :as state} tag pop? ith]
     (if-not (> ith (count ts))
       (let [current-ts (nth ts (- (count ts) ith))]
