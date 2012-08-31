@@ -11,9 +11,9 @@
       (add-to-stack state :float (last auxstack))
       state)))
 
-(dotimes [_ 10]
-  (doseq [instruction (registered-for-type 'ts)]
-    (swap! registered-instructions conj instruction)))
+(doseq [instruction (registered-for-type 'ts)
+	_ (range 10)]
+  (swap! registered-instructions conj instruction))
 
 (reset! training-data
 	(let [rands (take 10 (repeatedly #(rand 100)))]
