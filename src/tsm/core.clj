@@ -18,7 +18,7 @@
 (defn is-imap? [thing] (and (map? thing) (thing :imap)))
 (defn is-ts? [thing] (and (is-imap? thing) (= (first (s/split (str (thing :imap)) #"_")) "ts")))
 (defn is-composite? [thing] (or (is-imap? thing) (is-pair? thing)))
-(defn is-noop? [thing] (= thing :noop))
+#_(defn is-noop? [thing] (= thing :noop))
 
 ;; Used for debugging
 ;; ------------------------------------------------------------------------------------------------
@@ -39,14 +39,14 @@
 
 ;; I'm keeping tag evaluation in core.clj, since this is, after all, a tag space machine
 (defn match-tag [ts tag]
-  (if-not (empty? ts)
+  (if (empty? ts)
+    (throw (Exception. e "Tag space is empty!"))
     (let [[_ default-val] (first ts)]
       (loop [ts-seq (seq ts)]
 	(if-let [[[t v] & more] ts-seq]
 	  (if (>= t tag) v
 	      (recur more))
-	  default-val)))
-    :noop))
+	  default-val)))))
 
 (defn eval-inst [state inst]
   (if-let [cmd (get @instruction-table inst)]
@@ -84,7 +84,7 @@
 	  (is-composite? i) (eval-composite new-state i)
 	  stack (add-to-stack new-state stack i)
 	  (is-inst? i) (eval-inst new-state i)
-	  (is-noop? i) new-state
+;;	  (is-noop? i) new-state
 	  :else (throw (Exception. (str "Unrecognized value on x stack: " i))))))
 
 (let [time-limit @@(ns-resolve 'tsm.config 'time-limit)]
