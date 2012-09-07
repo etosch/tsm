@@ -1,46 +1,41 @@
 (ns tsm.evolve.gp
   (:use [tsm core config util instructions])
   (:require [tsm.evolve.random :as rand]
-	    [clojush.random :as pushrand]
 	    [clojure.string :as s])
   )
 
 
 ;; right now xover only operates on the top tag space
-(defn crossover [{mts-stack :ts, :as mom} {pts-stack :ts, :as pop}
-		 & {:keys [momseed popseed]}]
+;; returns a vec because it had previously been implemented to return two children;
+;; this way we don't try to call first somewhere on something that's not a collection
+(defn crossover [{mts-stack :ts, :as mom} {pts-stack :ts, :as pop}]
   (when @debug (println "crossover"))
   (let [[mom-rest-ts [mts]] (vec-split mts-stack -1)
 	[pop-rest-ts [pts]] (vec-split pts-stack -1)
-	mompoint (or momseed (pushrand/lrand-int (count mts)))
-	poppoint (or popseed (pushrand/lrand-int (count pts)))
-	kid1-tags-and-vals (concat (take mompoint (seq mts))
-				   (drop poppoint (seq pts)))
-	kid2-tags-and-vals (concat (take poppoint (seq pts))
-				   (drop mompoint (seq mts)))]
-    [(assoc mom :ts (conj mom-rest-ts (veclist-to-map kid1-tags-and-vals)))
-     (assoc pop :ts (conj pop-rest-ts (veclist-to-map kid2-tags-and-vals)))]
+	child (concat (take (inc (rand-int (count mts))) (shuffle (seq mts)))
+		      (take (inc (rand-int (count pts))) (shuffle (seq pts))))]
+    [(assoc mom :ts (conj mom-rest-ts (veclist-to-map child)))]
     )
   )
 
 (defn mutate [{ts-stack :ts, :as state} atom-generators]
   (when @debug (println "mutate"))
   (let [[ts-rest [ts]] (vec-split ts-stack -1)
-	[target-tag target-val] (nth (seq ts) (pushrand/lrand-int (count ts)))
+	[target-tag target-val] (nth (seq ts) (rand-int (count ts)))
 	popped-ts (dissoc ts target-tag)]
     (assoc state
       :ts
       (conj ts-rest
-	    (get {:tag (assoc popped-ts (pushrand/lrand @tag-limit) target-val)
+	    (get {:tag (assoc popped-ts (rand @tag-limit) target-val)
 		  :value (assoc popped-ts target-tag (let [[i1 i2] (rand/random-instructions 2 atom-generators)]
 						       (get {:first [i1 (target-val 1)]
 							     :second [(target-val 0) i2]
 							     :both [i1 i2]
 							     :neither i1}
 							    (if (is-pair? target-val)
-							      (pushrand/lrand-nth '(:first :second :both))
-							      (pushrand/lrand-nth '(:both :neither))))))}
-		 (pushrand/lrand-nth '(:tag :value)))))))
+							      (rand-nth '(:first :second :both))
+							      (rand-nth '(:both :neither))))))}
+		 (rand-nth '(:tag :value)))))))
 
 ;; basic tournament selection
 ;; maybe set this up as a multimethod to implement the various types of selection
@@ -50,32 +45,58 @@
   (cond (= selection-type :basic-tourney) (reduce #(if (distance-comparator (distance-function (error-function %1))
 									    (distance-function (error-function %2)))
 						     %1 %2)
-						  (take tourney-size (pushrand/lshuffle population)))
+						  (take tourney-size (shuffle population)))
 	:else (throw (Exception. (str "Selection type: " selection-type " not implemented.")))))
 
 (defn breed [population error-function distance-function distance-comparator
 	     mutation-probability crossover-probability
 	     selection-type tourney-size atom-generators]
   (when @debug (println "breed"))
-  (let [n (pushrand/lrand)
+  (let [n (rand)
 	i1 (select error-function distance-function distance-comparator population selection-type tourney-size)
 	i2 (select error-function distance-function distance-comparator population selection-type tourney-size)]
     (cond (< n mutation-probability) (mutate i1 atom-generators)
 	  (< n (+ mutation-probability crossover-probability)) ((crossover i1 i2) 0)
 	  :else i1)))
 
+(defn partition-population [population feature value]
+  (loop [pop population us '() them '()]
+    (cond (empty? pop) [us them]
+	  (= value (get (first pop) feature)) (recur (rest pop) (cons (first pop) us) them)
+	  :else (recur (rest pop) us (cons (first pop) them)))))
+
+(defn frequency-and-err-stats [individuals feature]
+  (loop [result {} guys individuals]
+    (if (empty? guys) result
+	(let [this-val (get (first guys) feature)
+	      [these-guys those-guys] (partition-population guys feature this-val)]
+	  (recur (assoc result this-val (let [us (vec (sort-by :error < these-guys)) ct (count us)]
+					  {:ct ct
+ 					   :min-err ((first us) :error)
+ 					   :max-err ((last us) :error)
+ 					   :med-err (if (odd? ct)
+ 						      ((nth us (int (/ ct 2))) :error)
+						      (let [[a b] (subvec us (dec (/ ct 2)) (inc (/ ct 2)))]
+							(/ (+ (a :error) (b :error)) 2)))
+					   }
+					  ))
+		 those-guys)))))
+
 (defn print-report [population]
   (when @debug (println "report"))
   (let [fmap (frequencies (map :error population))
 	best-program (first population)
-	best-program-pretty (str "\n\tTag space size vector: " (doall (seq (best-program :ts-size)))
+	best-program-pretty (str "\n\tTop tag space size: " (first (best-program :ts-size))
 				 "\n\tError: " (best-program :error)
 				 "\n\tNumber of executed steps: " (doall (seq (best-program :step-vector)))
 				 "\n\tIndividual:\n\t\t{" (reduce str (for [[k v] (best-program :individual)] (str k " " v "\n\t\t")))
 				 "}")
-	smap (frequencies (map :ts-size population))
+	smap ;;(frequency-and-err-stats population :ts-size)
+	(veclist-to-map (seq (frequencies (map #(first (:ts-size %)) population))))
 	copies (frequencies (sort (vals (frequencies (map :individual population)))))
-	execution-steps (frequencies (map :step-vector population))]
+	execution-steps ;;(frequency-and-err-stats population :step-vector)
+	(frequencies (map :step-vector population))
+	]
     (printf "Frequency Map: %s\nBest Program%s\nSize Map: %s\nCopy Map: %s\nExecution Steps Map: %s\n"
 	    fmap best-program-pretty smap copies execution-steps)))
 
@@ -123,7 +144,6 @@
 						     individuals))]
 	(println "GENERATION:" gen) 
 	(print-report individuals-with-fitnesses)
-	(flush)
 	(cond (> gen max-generation) (println "FAILURE")
 	      (= 0 ((first individuals-with-fitnesses) 0)) (println "SUCCESS")
 	      :else (recur (repeatedly population-size #(breed individuals
