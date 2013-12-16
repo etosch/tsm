@@ -95,5 +95,5 @@
   (fn [{floatstack :float, :as state}]
     (if (> (count floatstack) 0)
       (let [[more [x]] (vec-split floatstack -1)]
-	(add-to-stack (assoc state :float more) :Float (Math/tan x)))
+	(add-to-stack (assoc state :float more) :float (Math/tan x)))
       state)))
